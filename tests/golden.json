@@ -1,0 +1,47 @@
+{
+  "prompts": [
+    "机器学习模型在训练过程中需要大量的高质量数据，数据质量决定了模型的上限。",
+    "私たちは明日の朝九時に新宿駅で待ち合わせをしましょう。",
+    "龘靐齉爩飝鱻麤",
+    "def fibonacci(n): return n if n < 2 else fibonacci(n-1) + fibonacci(n-2)",
+    "/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/",
+    "31415926535897932384626433832795028841971693993751",
+    "13800138000 010-87654321 400-800-8888",
+    "https://api.openrouter.ai/api/v1/chat/completions?model=anthropic/claude-3.7-sonnet",
+    "😀😂🤣😊😍🥰😘😎🤩",
+    "The quick brown fox jumps over the lazy dog. Please respond with OK only."
+  ],
+  "models": {
+    "deepseek-v4-flash": {
+      "provider": "deepseek-official",
+      "tokens": [100, 100, 97, 106, 116, 100, 100, 111, 100, 99],
+      "note": "2026-08-23 实测"
+    },
+    "deepseek-v4-flash-sf": {
+      "provider": "siliconflow",
+      "tokens": [100, 100, 97, 106, 116, 100, 100, 111, 100, 99],
+      "note": "2026-08-23 实测；与官方 Δ=0"
+    },
+    "deepseek-v3.2-sf": {
+      "provider": "siliconflow",
+      "tokens": [21, 21, 18, 27, 37, 21, 21, 32, 21, 20],
+      "note": "2026-08-23 实测；与 v4 Δ=79 恒定"
+    },
+    "qwen3.6-27b-sf": {
+      "provider": "siliconflow",
+      "tokens": [27, 24, 24, 33, 39, 60, 47, 38, 29, 26],
+      "note": "2026-08-23 实测；异家族对照"
+    },
+    "glm4.5-air-sf": {
+      "provider": "siliconflow",
+      "tokens": [23, 24, 19, 28, 34, 36, 24, 33, 26, 21],
+      "note": "2026-08-23 实测；异家族对照"
+    }
+  },
+  "verified_insights": {
+    "delta_official_vs_sf": 0,
+    "delta_v4_vs_v32": 79,
+    "reasoning_effort_max_tokens": 79,
+    "encode_config_match": {"thinking_mode": "thinking", "reasoning_effort": "max", "bos": true}
+  }
+}

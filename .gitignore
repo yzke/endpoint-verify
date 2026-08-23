@@ -1,0 +1,15 @@
+# 依赖与缓存
+pylibs/
+cache/
+__pycache__/
+*.pyc
+
+# 密钥与本地状态
+.env
+.env.*
+*.log
+
+# 测试与运行产物
+probe_result*.json
+verdict*.json
+report*.md

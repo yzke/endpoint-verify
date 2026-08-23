@@ -1,0 +1,19 @@
+{
+  "model": "deepseek-v3.2",
+  "hf_repo": "deepseek-ai/DeepSeek-V3.2",
+  "tokenizer_path": "cache/deepseek-v4-flash/tokenizer.json",
+  "encoder_path": "cache/deepseek-v4-flash/encoding_dsv4.py",
+  "note": "家族共用词表：v3.2 复用 v4 的 tokenizer/编码器（Δ=79 恒定证明同词表）",
+  "encode_config": {
+    "thinking_mode": "thinking",
+    "reasoning_effort": null,
+    "add_default_bos_token": true
+  },
+  "expected_tokens": [21, 21, 18, 27, 37, 21, 21, 32, 21, 20],
+  "system_prefix_tokens": 0,
+  "verified": {
+    "by": "dengdeng",
+    "date": "2026-08-23",
+    "method": "api-diff（与 v4 Δ=79 恒定）+ effort=null 本地重建 0差"
+  }
+}
