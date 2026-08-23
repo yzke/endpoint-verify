@@ -73,6 +73,19 @@ python3 scripts/report.py --verdict /tmp/verdict.json --probe /tmp/probe.json --
 - 指纹库条目（registry/*.json）只含公开元数据，不含任何密钥
 - 检测只发 10 组短提示词（max_tokens=1），费用可忽略
 
+## 已覆盖模型（v1.1）
+
+| 模型 | 编码方式 | 验证状态 |
+|---|---|---|
+| deepseek-v4-flash | 官方编码器脚本 | 官方+硅基 Δ=0 |
+| deepseek-v3.2 | 官方脚本（家族共用词表） | 硅基 Δ=0 |
+| qwen3.6-27b | HF chat_template | 硅基 Δ=0 |
+| glm4.5-air | chat_template.jinja（不加 generation prompt） | 硅基 Δ=0 |
+| mistral-small-3.1 | HF chat_template | 已缓存，待验证 |
+
+新增模型：`fetch_registry.py` 拉缓存 + `registry/<model>.json` 登记（见 registry/README.md）。
+Kimi（tiktoken 格式）与闭源模型（GPT/Claude/Gemini）暂不支持 L2，仅可做 L1 差分。
+
 ## 已知局限（报告时如实说明）
 
 - 指纹只到"家族级 + 编码配置级"：同族共用词表时（如 DeepSeek V3.2/V4），依赖系统提示开销差（如 79）区分；部分模型可能无法区分 → 标注置信度

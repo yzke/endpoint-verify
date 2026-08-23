@@ -1,0 +1,13 @@
+{
+  "model": "qwen3.6-27b",
+  "hf_repo": "Qwen/Qwen3.6-27B",
+  "tokenizer_path": "cache/qwen3.6-27b/tokenizer.json",
+  "tokenizer_config_path": "cache/qwen3.6-27b/tokenizer_config.json",
+  "encoder_type": "chat_template",
+  "expected_tokens": [27, 24, 24, 33, 39, 60, 47, 38, 29, 26],
+  "verified": {
+    "by": "dengdeng",
+    "date": "2026-08-23",
+    "method": "chat_template 本地重建 vs 硅基流动 API 实测"
+  }
+}

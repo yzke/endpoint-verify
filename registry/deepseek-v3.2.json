@@ -9,11 +9,23 @@
     "reasoning_effort": null,
     "add_default_bos_token": true
   },
-  "expected_tokens": [21, 21, 18, 27, 37, 21, 21, 32, 21, 20],
+  "expected_tokens": [
+    21,
+    21,
+    18,
+    27,
+    37,
+    21,
+    21,
+    32,
+    21,
+    20
+  ],
   "system_prefix_tokens": 0,
   "verified": {
     "by": "dengdeng",
     "date": "2026-08-23",
     "method": "api-diff（与 v4 Δ=79 恒定）+ effort=null 本地重建 0差"
-  }
+  },
+  "encoder_type": "dsv4"
 }

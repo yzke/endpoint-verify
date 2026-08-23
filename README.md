@@ -73,6 +73,32 @@ paths, default encode config, expected token sequence, system-prefix overhead,
 and verification provenance. Same-family models reuse the shared tokenizer
 (see `deepseek-v3.2.json`). See `registry/README.md` for contribution guide.
 
+### Supported models (v1.1)
+
+| Model | Encoder type | Verified against |
+|---|---|---|
+| deepseek-v4-flash | official script (dsv4) | DeepSeek official + SiliconFlow, Δ=0 |
+| deepseek-v3.2 | official script (dsv4, shared tokenizer) | SiliconFlow, Δ=0 |
+| qwen3.6-27b | HF chat_template | SiliconFlow, Δ=0 |
+| glm4.5-air | HF chat_template (chat_template.jinja, no gen prompt) | SiliconFlow, Δ=0 |
+| mistral-small-3.1 | HF chat_template | tokenizer cached, expected_tokens pending |
+
+Encoder types: `dsv4` = vendor encoding reference script; `chat_template` =
+HF Jinja template rendered with `tokenizers` (optionally without
+`add_generation_prompt`, configurable per entry).
+
+Notes:
+- **Kimi-K3**: tokenizer is `tiktoken.model` + custom code (`tokenization_kimi.py`);
+  not yet supported by this skill (roadmap: tiktoken adapter).
+- **Meta Llama**: gated repo; set `HF_TOKEN` env var (HF account with access)
+  before `fetch_registry.py`.
+- **Closed models (GPT/Claude/Gemini)**: tokenizers are not public, so L2
+  0-diff rebuild is impossible; only L1 differential against community golden
+  sequences applies (roadmap).
+- **Reasoning models** (e.g. GLM-4.5): servers often run full reasoning even
+  with `max_tokens=1`; probing is slow and urllib may time out — retry or
+  rely on offline golden verification.
+
 ## Tests
 
 ```bash

@@ -8,7 +8,18 @@
     "reasoning_effort": "max",
     "add_default_bos_token": true
   },
-  "expected_tokens": [100, 100, 97, 106, 116, 100, 100, 111, 100, 99],
+  "expected_tokens": [
+    100,
+    100,
+    97,
+    106,
+    116,
+    100,
+    100,
+    111,
+    100,
+    99
+  ],
   "system_prefix_tokens": 79,
   "system_prefix_note": "79 = REASONING_EFFORT_MAX 常量（官方 encoding_dsv4.py）",
   "verified": {
@@ -16,5 +27,6 @@
     "date": "2026-08-23",
     "method": "api-diff + local-rebuild 0差",
     "evidence": "官方API与硅基流动 Δ=0；本地重建 thinking/max/BOS 十组0差"
-  }
+  },
+  "encoder_type": "dsv4"
 }

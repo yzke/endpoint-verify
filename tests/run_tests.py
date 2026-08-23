@@ -48,12 +48,8 @@ def load_golden():
 
 
 def build_registry():
-    """测试用 registry：deepseek-v4-flash + deepseek-v3.2（用真实条目）。"""
-    registry = {}
-    for name in ["deepseek-v4-flash", "deepseek-v3.2"]:
-        with open(os.path.join(ROOT, "registry", f"{name}.json"), encoding="utf-8") as f:
-            registry[name] = json.load(f)
-    return registry
+    """测试用 registry：加载全部真实条目（与 verify 一致）。"""
+    return verify_mod.load_registry(os.path.join(ROOT, "registry"))
 
 
 def test_cache_integrity():
@@ -111,6 +107,24 @@ def test_verdicts():
     check("E: v4 序列声称 v3.2 -> 定位 v4", v["verdict"] == "same-family-downgrade"
           and v["located_model"] == "deepseek-v4-flash", str(v))
 
+    # 场景 F: 声称 qwen3.6-27b，API 序列 = qwen（chat_template 重建）-> authentic
+    v = verify_mod.classify("qwen3.6-27b", golden["models"]["qwen3.6-27b-sf"]["tokens"],
+                            registry)
+    check("F: qwen 声称 qwen（chat_template）-> authentic", v["verdict"] == "authentic",
+          str(v.get("verdict")))
+
+    # 场景 G: 声称 glm4.5-air，API 序列 = glm（chat_template 重建）-> authentic
+    v = verify_mod.classify("glm4.5-air", golden["models"]["glm4.5-air-sf"]["tokens"],
+                            registry)
+    check("G: glm 声称 glm（chat_template）-> authentic", v["verdict"] == "authentic",
+          str(v.get("verdict")))
+
+    # 场景 H: 声称 glm4.5-air，API 序列 = qwen（异家族）-> cross-family
+    v = verify_mod.classify("glm4.5-air", golden["models"]["qwen3.6-27b-sf"]["tokens"],
+                            registry)
+    check("H: qwen 序列声称 glm -> cross-family", v["verdict"] == "cross-family",
+          str(v.get("verdict")))
+
 
 def test_key_leak():
     print("\n[测试 3] key 泄漏扫描")
@@ -147,8 +161,14 @@ def test_online():
          "deepseek-v4-flash", "deepseek-v4-flash", "authentic"),
         ("硅基 v3.2", "https://api.siliconflow.cn/v1/chat/completions", "SILICONFLOW_API_KEY",
          "deepseek-ai/DeepSeek-V3.2", "deepseek-v3.2", "authentic"),
+        ("硅基 qwen3.6-27b", "https://api.siliconflow.cn/v1/chat/completions", "SILICONFLOW_API_KEY",
+         "Qwen/Qwen3.6-27B", "qwen3.6-27b", "authentic"),
+        # GLM-4.5-Air 为 reasoning 模型，硅基端完整推理致 urllib 请求过慢，
+        # 在线验证由离线 golden 0 差场景覆盖（tests 场景已验证 authentic）。
         ("硅基 qwen 声称 v4", "https://api.siliconflow.cn/v1/chat/completions", "SILICONFLOW_API_KEY",
          "Qwen/Qwen3.6-27B", "deepseek-v4-flash", "cross-family"),
+        # GLM-4.5-Air 在线请求不稳定（reasoning 模型，urllib 偶发超时），
+        # 该交叉场景由离线用例 H 覆盖。
     ]
     registry = build_registry()
     for label, base, env, api_model, claimed, expect in cases:
@@ -159,7 +179,7 @@ def test_online():
                 [sys.executable, os.path.join(ROOT, "scripts", "probe.py"),
                  "--base-url", base, "--api-key-env", env, "--model", api_model,
                  "--output", probe_path],
-                capture_output=True, text=True, timeout=300)
+                capture_output=True, text=True, timeout=450)
             if r.returncode != 0:
                 check(f"[在线] {label}: probe 失败", False, r.stderr[-200:])
                 continue

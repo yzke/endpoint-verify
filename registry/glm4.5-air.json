@@ -1,0 +1,28 @@
+{
+  "model": "glm4.5-air",
+  "hf_repo": "zai-org/GLM-4.5-Air",
+  "tokenizer_path": "cache/glm4.5-air/tokenizer.json",
+  "tokenizer_config_path": "cache/glm4.5-air/tokenizer_config.json",
+  "encoder_type": "chat_template",
+  "expected_tokens": [
+    23,
+    24,
+    19,
+    28,
+    34,
+    36,
+    24,
+    33,
+    26,
+    21
+  ],
+  "verified": {
+    "by": "dengdeng",
+    "date": "2026-08-23",
+    "method": "chat_template 本地重建 vs 硅基流动 API 实测"
+  },
+  "chat_template_file": "cache/glm4.5-air/chat_template.jinja",
+  "encode_config": {
+    "add_generation_prompt": false
+  }
+}

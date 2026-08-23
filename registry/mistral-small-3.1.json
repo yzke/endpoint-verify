@@ -1,0 +1,13 @@
+{
+  "model": "mistral-small-3.1",
+  "hf_repo": "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+  "tokenizer_path": "cache/mistral-small-3.1/tokenizer.json",
+  "tokenizer_config_path": "cache/mistral-small-3.1/tokenizer_config.json",
+  "encoder_type": "chat_template",
+  "expected_tokens": [],
+  "verified": {
+    "by": "dengdeng",
+    "date": "2026-08-23",
+    "method": "tokenizer 已缓存；expected_tokens 待真实 API 验证（当前无可用 key）"
+  }
+}

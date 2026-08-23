@@ -29,7 +29,11 @@ def fetch(url, dest):
         return True
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     print(f"[get ] {url}")
-    req = urllib.request.Request(url, headers={"User-Agent": "endpoint-verify"})
+    headers = {"User-Agent": "endpoint-verify"}
+    hf_token = os.environ.get("HF_TOKEN", "")
+    if hf_token:
+        headers["Authorization"] = f"Bearer {hf_token}"
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=120) as resp, open(dest, "wb") as f:
             f.write(resp.read())
@@ -48,12 +52,16 @@ def main():
     parser.add_argument("--model", required=True, help="缓存目录名（registry 条目名）")
     parser.add_argument("--hf-repo", required=True, help="HF 仓库，如 deepseek-ai/DeepSeek-V4-Flash")
     parser.add_argument("--tokenizer-file", default="tokenizer.json", help="仓库内 tokenizer 文件路径")
-    parser.add_argument("--encoder-path", default=None, help="仓库内编码器参考实现路径（可选）")
+    parser.add_argument("--tokenizer-config", default="tokenizer_config.json",
+                        help="仓库内 tokenizer_config.json 路径（chat_template 来源，chat_template 类型条目需要）")
+    parser.add_argument("--encoder-path", default=None, help="仓库内编码器参考实现路径（可选，dsv4 类型条目需要）")
     args = parser.parse_args()
 
     base = f"https://huggingface.co/{args.hf_repo}/resolve/main"
     out_dir = os.path.join(CACHE, args.model)
     ok = fetch(f"{base}/{args.tokenizer_file}", os.path.join(out_dir, "tokenizer.json"))
+    if args.tokenizer_config:
+        ok &= fetch(f"{base}/{args.tokenizer_config}", os.path.join(out_dir, "tokenizer_config.json"))
     if args.encoder_path:
         ok &= fetch(f"{base}/{args.encoder_path}",
                     os.path.join(out_dir, os.path.basename(args.encoder_path)))

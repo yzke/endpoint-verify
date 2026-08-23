@@ -46,6 +46,37 @@ def load_encoder(encoder_path):
     return mod
 
 
+def rebuild_chat_template(tokenizer, chat_template, prompts, add_generation_prompt=True):
+    """用 HF chat_template（Jinja）渲染消息并编码，返回 token 数序列。
+
+    适用于没有官方编码器参考脚本的模型（Qwen/GLM/Llama/Mistral 等）。
+    add_generation_prompt 可配置（部分服务端渲染时不加 assistant 提示符）。
+    """
+    import jinja2
+    env = jinja2.Environment(
+        undefined=jinja2.ChainableUndefined,
+        extensions=[],
+    )
+    template = env.from_string(chat_template)
+    tokens = []
+    for p in prompts:
+        rendered = template.render(
+            messages=[{"role": "user", "content": p}],
+            add_generation_prompt=add_generation_prompt,
+        )
+        tokens.append(len(tokenizer.encode(rendered).ids))
+    return tokens
+
+
+def rebuild_with_entry(tokenizer, encoder, prompts, entry, cfg):
+    """按条目编码器类型重建：dsv4=官方脚本；chat_template=Jinja 模板。"""
+    enc_type = entry.get("encoder_type", "chat_template")
+    if enc_type == "dsv4":
+        return rebuild_tokens(tokenizer, encoder, prompts, cfg)
+    agp = entry.get("encode_config", {}).get("add_generation_prompt", True)
+    return rebuild_chat_template(tokenizer, entry.get("chat_template", ""), prompts, agp)
+
+
 def rebuild_tokens(tokenizer, encoder, prompts, cfg):
     """按配置重建一组提示词的本地期望 token 数。"""
     tokens = []
@@ -134,8 +165,37 @@ def classify(claimed, api_tokens, registry, prompts=DEFAULT_PROMPTS):
         return verdict
 
     from tokenizers import Tokenizer
+    tok_path = os.path.join(ROOT, entry.get("tokenizer_path", ""))
+    if not os.path.exists(tok_path):
+        verdict["evidence"]["error"] = f"缓存缺失: {tok_path}（用 fetch_registry.py 拉取）"
+        return verdict
     tokenizer = Tokenizer.from_file(tok_path)
-    encoder = load_encoder(enc_path)
+
+    # 编码器：dsv4=官方脚本；chat_template=从 tokenizer_config.json 读 Jinja 模板
+    enc_type = entry.get("encoder_type", "chat_template")
+    encoder = None
+    if enc_type == "dsv4":
+        enc_path = os.path.join(ROOT, entry.get("encoder_path", ""))
+        if not os.path.exists(enc_path):
+            verdict["evidence"]["error"] = f"编码器脚本缺失: {enc_path}"
+            return verdict
+        encoder = load_encoder(enc_path)
+    else:
+        # chat_template：优先 tokenizer_config.json 的 chat_template 字段，
+        # 缺失时回退独立模板文件（如 chat_template.jinja）
+        entry["chat_template"] = ""
+        tc_path = os.path.join(ROOT, entry.get("tokenizer_config_path", ""))
+        if os.path.exists(tc_path):
+            with open(tc_path, encoding="utf-8") as f:
+                entry["chat_template"] = json.load(f).get("chat_template", "") or ""
+        if not entry["chat_template"]:
+            tf_path = os.path.join(ROOT, entry.get("chat_template_file", ""))
+            if os.path.exists(tf_path):
+                with open(tf_path, encoding="utf-8") as f:
+                    entry["chat_template"] = f.read()
+        if not entry["chat_template"]:
+            verdict["evidence"]["error"] = "缺少 chat_template（tokenizer_config.json 与 chat_template.jinja 均无）"
+            return verdict
 
     def entry_config(e):
         ec = e.get("encode_config", {})
@@ -145,25 +205,36 @@ def classify(claimed, api_tokens, registry, prompts=DEFAULT_PROMPTS):
 
     # 1) 声称模型：默认配置比对
     cfg0 = entry_config(entry)
-    local0 = rebuild_tokens(tokenizer, encoder, prompts, cfg0)
+    local0 = rebuild_with_entry(tokenizer, encoder, prompts, entry, cfg0)
     ds0 = diff_stats(api_tokens, local0)
     verdict["evidence"]["claimed_default"] = {
-        "config": cfg0, "diffs": ds0,
+        "config": cfg0, "encoder_type": enc_type, "diffs": ds0,
     }
 
-    # 2) 候选矩阵扫描：registry 全部条目（各自默认配置）
+    # 2) 候选矩阵扫描：registry 全部条目（各自默认编码）
     for name, e in registry.items():
         if name == claimed:
             continue
-        e_enc = os.path.join(ROOT, e.get("encoder_path", ""))
         e_tok = os.path.join(ROOT, e.get("tokenizer_path", ""))
-        if not (os.path.exists(e_enc) and os.path.exists(e_tok)):
+        if not os.path.exists(e_tok):
             continue
         try:
             e_tok_obj = Tokenizer.from_file(e_tok)
-            e_enc_mod = load_encoder(e_enc)
+            e_enc_mod = None
+            if e.get("encoder_type", "chat_template") == "dsv4":
+                e_enc_path = os.path.join(ROOT, e.get("encoder_path", ""))
+                if not os.path.exists(e_enc_path):
+                    continue
+                e_enc_mod = load_encoder(e_enc_path)
+            else:
+                e_tc = os.path.join(ROOT, e.get("tokenizer_config_path", ""))
+                if os.path.exists(e_tc):
+                    with open(e_tc, encoding="utf-8") as f:
+                        e["chat_template"] = json.load(f).get("chat_template", "")
+                else:
+                    e["chat_template"] = ""
             c_cfg = entry_config(e)
-            c_local = rebuild_tokens(e_tok_obj, e_enc_mod, prompts, c_cfg)
+            c_local = rebuild_with_entry(e_tok_obj, e_enc_mod, prompts, e, c_cfg)
             c_ds = diff_stats(api_tokens, c_local)
             verdict["candidates"][name] = {"config": c_cfg, "diffs": c_ds}
         except Exception as exc:  # noqa: BLE001
@@ -187,8 +258,10 @@ def classify(claimed, api_tokens, registry, prompts=DEFAULT_PROMPTS):
             verdict["confidence"] = "medium"
             verdict["evidence"]["note"] = "恒定偏移但候选矩阵无 0 差匹配：可能为系统提示差异或未知同族模型"
     elif ds0 is not None:
-        # 波动：矩阵搜索声称条目，看是否存在 0 差配置（服务端配置与条目默认不符）
-        _, ds_best, _ = best_match(tokenizer, encoder, prompts, api_tokens)
+        # 波动：dsv4 类型可矩阵搜索声称条目，看是否存在 0 差配置（服务端配置与条目默认不符）
+        ds_best = None
+        if enc_type == "dsv4":
+            _, ds_best, _ = best_match(tokenizer, encoder, prompts, api_tokens)
         if ds_best and ds_best["constant"] and ds_best["max"] == 0:
             verdict["verdict"] = "authentic"
             verdict["confidence"] = "low"
